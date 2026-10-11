@@ -169,7 +169,7 @@ Accessibility: text meets color-contrast guidelines in light and dark mode, ever
 
 **Templates:** none. The project was built from scratch during the hackathon window.
 
-**AI assistance:** This project was built with help from Claude (Anthropic). At my direction, Claude researched the literature, wrote the code, debugged errors, suggested scenario values, and helped with writing. I chose the problem, decided what to research, directed the project, made the design decisions, and ran and verified all results on Qollab and IonQ's simulators.
+**AI assistance:** This project was built with help from Claude (Anthropic). At my direction, Claude researched the literature, wrote the code,  debugged most errors, suggested scenario values. I chose the problem, decided what to research, directed the project, made the design decisions, and ran and verified all results on Qollab and IonQ's simulators.
 
 ## License
 
