@@ -1,0 +1,16 @@
+Q-Organ Route - standard QAOA (X mixer) vs XY mixer, ideal Aer simulator, CVaR alpha=0.2, 4096 shots
+Date: Oct 10, 2026 (build window)
+
+scenario   mixer p  depth P(optimal) P(feasible) found
+nominal    x     1  12    0.017      0.289       True
+nominal    x     2  18    0.037      0.464       True
+nominal    xy    1  42    0.085      0.900       True
+nominal    xy    2  66    0.255      0.619       True
+disruption x     1  12    0.019      0.252       True
+disruption x     2  18    0.051      0.415       True
+disruption xy    1  42    0.099      0.683       True
+disruption xy    2  66    0.218      0.984       True
+
+XY mixer, nominal, p=2: one mode per organ = 1.000 (always);
+remaining infeasible samples are 2+ organs on the single jet = 0.381 (jet capacity is still a penalty).
+Random guess P(optimal) = 1/512 = 0.0020.

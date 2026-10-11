@@ -1,0 +1,18 @@
+Q-Organ Route - local run (Qiskit Aer ideal simulator + OR-Tools CP-SAT baseline)
+Date: Oct 9, 2026 (build window)
+
+=== Nominal plan ===
+Exact (brute force): {'heart': 'jet', 'liver': 'commercial', 'kidney': 'commercial'}  E=12.350  (2.5 ms)
+OR-Tools CP-SAT:     {'heart': 'jet', 'liver': 'commercial', 'kidney': 'commercial'}  obj=12.350  (12.2 ms)
+QAOA p=2, CVaR alpha=0.2, 9 qubits, depth 17
+  best sampled plan: {'heart': 'jet', 'liver': 'commercial', 'kidney': 'commercial'}  E=12.350
+  P(optimal)=0.037  P(feasible)=0.464  (random guess P(optimal)=0.0020)
+  found optimum: True
+
+=== Disruption: jet delayed 2.5 h ===
+Exact (brute force): {'heart': 'commercial', 'liver': 'commercial', 'kidney': 'commercial'}  E=15.475  (4.2 ms)
+OR-Tools CP-SAT:     {'heart': 'commercial', 'liver': 'commercial', 'kidney': 'commercial'}  obj=15.476  (3.8 ms)
+QAOA p=2, CVaR alpha=0.2, 9 qubits, depth 17
+  best sampled plan: {'heart': 'commercial', 'liver': 'commercial', 'kidney': 'commercial'}  E=15.475
+  P(optimal)=0.051  P(feasible)=0.415  (random guess P(optimal)=0.0020)
+  found optimum: True

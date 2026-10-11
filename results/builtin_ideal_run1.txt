@@ -1,0 +1,19 @@
+Q-Organ Route - Qollab Built-in simulator (24q), ideal (no noise)
+Date: Oct 9, 2026 (build window)
+Sampling: statevector, 4096 shots
+
+=== Nominal plan ===
+Exact (brute force): {'heart': 'jet', 'liver': 'commercial', 'kidney': 'commercial'}  E=12.350  (6.5 ms)
+OR-Tools CP-SAT:     skipped (not installed in this runtime)
+QAOA p=2, CVaR alpha=0.2, 9 qubits, depth 18
+  best sampled plan: {'heart': 'jet', 'liver': 'commercial', 'kidney': 'commercial'}  E=12.350
+  P(optimal)=0.040  P(feasible)=0.469  (random guess P(optimal)=0.0020)
+  found optimum: True
+
+=== Disruption: jet delayed 2.5 h ===
+Exact (brute force): {'heart': 'commercial', 'liver': 'commercial', 'kidney': 'commercial'}  E=15.475  (3.9 ms)
+OR-Tools CP-SAT:     skipped (not installed in this runtime)
+QAOA p=2, CVaR alpha=0.2, 9 qubits, depth 18
+  best sampled plan: {'heart': 'commercial', 'liver': 'commercial', 'kidney': 'commercial'}  E=15.475
+  P(optimal)=0.048  P(feasible)=0.423  (random guess P(optimal)=0.0020)
+  found optimum: True

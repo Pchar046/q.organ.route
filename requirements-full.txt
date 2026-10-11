@@ -1,0 +1,5 @@
+qiskit>=2.0
+qiskit-aer>=0.17
+ortools>=9.10
+scipy
+numpy

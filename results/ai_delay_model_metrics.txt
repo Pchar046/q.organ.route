@@ -1,0 +1,24 @@
+Q-Organ Route - AI delay model (BTS Reporting Carrier On-Time Performance, December 2025)
+Date: Oct 10, 2026 (build window)
+Data: 582,304 U.S. domestic flights. Train: Dec 1-21 (395,570). Test: Dec 22-31 (186,734).
+Target: arrived 15+ min late, cancelled, or diverted (test rate 29.5%).
+Model: scikit-learn HistGradientBoosting (classifier + regressor), features:
+       origin, destination, airline, scheduled departure hour, day of week, distance.
+
+                                AI model    Route-average baseline
+Ranking risky flights (AUC)     0.645       0.587     (higher is better)
+Probability error (Brier)       0.1994      0.2075    (lower is better)
+Delay length error (MAE, min)   57.5        60.8      (lower is better)
+
+Predicted risk for the scenario's commercial legs (Friday, 2 PM departure, lowest-risk carrier with 30+ flights):
+heart  MIA-ATL  MQ  P(delay)=0.164  delay if late=0.90 h
+liver  MIA-CLT  AA  P(delay)=0.176  delay if late=1.04 h
+kidney MIA-MCO  AA  P(delay)=0.206  delay if late=0.98 h
+
+Assumption: a cancelled or diverted flight counts as a 180-minute delay (rebooking).
+Jet and ground legs still use planning assumptions (no public data).
+Limit: no weather features, one month of data; gains over the baseline are modest.
+
+Quantum planner with AI risks (local Aer ideal, XY mixer, p=2):
+Nominal:    plan heart=jet, liver=commercial, kidney=commercial; P(optimal)=0.260; found optimum: True
+Disruption: plan all commercial;                                P(optimal)=0.219; found optimum: True

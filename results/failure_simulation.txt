@@ -1,0 +1,21 @@
+Q-Organ Route - transport failure simulation (failure_sim.py)
+Date: Oct 10, 2026 (build window)
+Failure = an organ arrives after its cold-ischemia limit (heart 4 h, liver 12 h, kidney 24 h).
+Assumptions: jet delayed before departure in 10% of transports, by 1-3 h. Late legs draw an
+exponential delay with the leg's mean. Commercial-flight risk from the AI model (BTS Dec 2025).
+
+Delay risk source: AI model on BTS Dec 2025 data
+Transports simulated: 10,000  (jet delayed before departure in ~10%)
+Basic dispatch plan:      {'heart': 'commercial', 'liver': 'ground', 'kidney': 'ground'}
+Q-Organ Route plan:       {'heart': 'jet', 'liver': 'commercial', 'kidney': 'commercial'}
+Re-planned in 1,033 transports
+
+Policy                          any organ late    heart    liver   kidney
+Basic dispatch                         12.33%    8.88%    3.75%    0.00%
+Q-Organ Route (plan once)               5.26%    5.26%    0.00%    0.00%
+Q-Organ Route + re-planning             0.97%    0.97%    0.00%    0.00%
+
+Stability: 10 seeds x 10,000 transports
+Basic dispatch                 mean 12.53%  range 12.03%-12.87%
+Q-Organ Route (plan once)      mean  5.12%  range  4.83%-5.45%
+Q-Organ Route + re-planning    mean  1.01%  range  0.87%-1.09%

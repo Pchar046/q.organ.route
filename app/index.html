@@ -1,0 +1,638 @@
+<title>Q-Organ Route Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: dispatch console. Controls + route map on top, organ clocks beside, evidence (AI + quantum) below. */
+:root {
+  --bg: #eef3f5;
+  --panel: #ffffff;
+  --ink: #12222b;
+  --muted: #546973;
+  --line: #cfdbe0;
+  --accent: #1c6aa8;
+  --accent-soft: #dcebf6;
+  --ok: #1d7a4e;
+  --ok-soft: #dff2e8;
+  --warn: #9a5b00;
+  --warn-soft: #fbeed6;
+  --bad: #b3261e;
+  --bad-soft: #fbe3e1;
+  --map: #f6f9fa;
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e171c; --panel: #152229; --ink: #e4edf1; --muted: #93a8b2; --line: #2a3c45;
+    --accent: #6cb4ec; --accent-soft: #1b3447; --ok: #6fd3a0; --ok-soft: #173327;
+    --warn: #f0b75a; --warn-soft: #3a2c12; --bad: #ff8a80; --bad-soft: #3d1c1a; --map: #111d23;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e171c; --panel: #152229; --ink: #e4edf1; --muted: #93a8b2; --line: #2a3c45;
+  --accent: #6cb4ec; --accent-soft: #1b3447; --ok: #6fd3a0; --ok-soft: #173327;
+  --warn: #f0b75a; --warn-soft: #3a2c12; --bad: #ff8a80; --bad-soft: #3d1c1a; --map: #111d23;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 24px 40px; display: grid; gap: 20px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1; }
+h2 { font-size: 1.45rem; }
+h3 { font-size: 1.15rem; }
+p { margin: 0; }
+.eyebrow { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+header { display: grid; gap: 8px; }
+header .lede { max-width: 68ch; color: var(--muted); }
+.notice { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 10px 14px; font-size: 0.92rem; color: var(--muted); max-width: 80ch; }
+.notice strong { color: var(--ink); }
+
+.console { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 860px) { .console { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 14px; min-width: 0; align-content: start; }
+
+.controls { display: grid; gap: 14px; }
+.control { display: grid; gap: 4px; }
+.control-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.control label { font-weight: 600; }
+.control output { font-family: var(--font-data); color: var(--accent); font-weight: 600; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+button { font: 600 0.95rem var(--font-body); border-radius: 6px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--panel); }
+button.ghost { background: transparent; color: var(--accent); }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button[disabled] { opacity: 0.5; cursor: default; }
+
+.map-wrap { background: var(--map); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.map-wrap svg { display: block; width: 100%; height: auto; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { width: 34px; height: 10px; }
+.clock { font-family: var(--font-data); font-size: 0.9rem; color: var(--muted); }
+
+.organs { display: grid; gap: 12px; }
+.organ { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; }
+.organ-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.organ-name { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; }
+.mode { font-family: var(--font-data); font-size: 0.85rem; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.bar { position: relative; height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.bar > i { position: absolute; inset: 0 auto 0 0; border-radius: 6px; background: var(--ok); }
+.bar.tight > i { background: var(--warn); }
+.bar.over > i { background: var(--bad); }
+.organ-meta { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 0.9rem; }
+.chip { font-size: 0.8rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.chip.tight { background: var(--warn-soft); color: var(--warn); }
+.chip.over { background: var(--bad-soft); color: var(--bad); }
+.plan-score { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 10px; font-size: 0.92rem; }
+.source { font-size: 0.85rem; color: var(--muted); }
+.source strong { color: var(--ink); }
+
+.evidence { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 860px) { .evidence { grid-template-columns: minmax(0, 1fr); } }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pbar { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+.pbar svg { flex: 1; height: 12px; min-width: 70px; }
+.note { font-size: 0.88rem; color: var(--muted); max-width: 70ch; }
+.log-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
+.log-count { display: grid; justify-items: end; line-height: 1.1; }
+.log-count .mono { font-size: 1.8rem; font-weight: 600; color: var(--bad); }
+.log { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; }
+.log li { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 10px; align-items: baseline; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
+.log li:last-child { border-bottom: 0; }
+.log time { font-family: var(--font-data); font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+.tag { font-family: var(--font-data); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.tag.failure { background: var(--bad-soft); color: var(--bad); }
+.tag.arrived { background: var(--ok-soft); color: var(--ok); }
+.tag.delay { background: var(--warn-soft); color: var(--warn); }
+.log .msg { min-width: 0; overflow-wrap: anywhere; }
+.log .empty { display: block; color: var(--muted); }
+footer { font-size: 0.88rem; color: var(--muted); display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 16px; }
+footer strong { color: var(--ink); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Donor in Miami · three organs · one charter jet</p>
+    <h1>Q-Organ Route</h1>
+    <p class="lede">AI predicts flight delays from real U.S. flight data. A quantum optimizer (QAOA) picks charter jet, commercial flight, or ground for each organ so every organ arrives inside its cold-ischemia limit. When something goes wrong, the plan is solved again.</p>
+    <p class="notice"><strong>The quantum results are real.</strong> Our QAOA ran on IonQ's Aria 1 noise-model simulator via Qollab and found the best plan in every recorded run. A web page can't call IonQ live, so the sliders check each new plan instantly with an exact solver, which confirms the same answers QAOA found. Times, costs and limits are illustrative planning values, not clinical guidance.</p>
+  </header>
+
+  <section class="console" aria-label="Simulation">
+    <div class="panel">
+      <div class="controls">
+        <div class="control">
+          <div class="control-head">
+            <label for="jetDelay">Charter jet delay</label>
+            <output id="jetDelayOut" for="jetDelay">0.0 h</output>
+          </div>
+          <input type="range" id="jetDelay" min="0" max="4" step="0.25" value="0" aria-describedby="jetDelayHelp">
+          <p id="jetDelayHelp" class="source">Mechanical or crew delay on the only jet. Try 2.5 h, the recorded disruption run.</p>
+        </div>
+        <div class="control">
+          <div class="control-head">
+            <label for="atlDelay">Extra delay on the Miami to Atlanta flight</label>
+            <output id="atlDelayOut" for="atlDelay">0.0 h</output>
+          </div>
+          <input type="range" id="atlDelay" min="0" max="3" step="0.25" value="0">
+        </div>
+        <div class="btn-row">
+          <button type="button" id="play">Play transport</button>
+          <button type="button" id="preset" class="ghost">Load recorded disruption (jet +2.5 h)</button>
+          <button type="button" id="reset" class="ghost">Reset</button>
+        </div>
+      </div>
+      <div class="map-wrap">
+        <svg id="map" viewBox="0 0 600 400" role="img" aria-labelledby="mapTitle mapDesc">
+          <title id="mapTitle">Route map</title>
+          <desc id="mapDesc">Schematic map of the southeastern United States. Routes run from Miami to Atlanta for the heart, Charlotte for the liver, and Orlando for the kidney. Each route is drawn in the style of its chosen transport mode.</desc>
+        </svg>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span><svg viewBox="0 0 34 10"><line x1="1" y1="5" x2="33" y2="5" stroke="currentColor" stroke-width="3"/></svg>Charter jet</span>
+        <span><svg viewBox="0 0 34 10"><line x1="1" y1="5" x2="33" y2="5" stroke="currentColor" stroke-width="3" stroke-dasharray="8 5"/></svg>Commercial flight</span>
+        <span><svg viewBox="0 0 34 10"><line x1="1" y1="5" x2="33" y2="5" stroke="currentColor" stroke-width="3" stroke-dasharray="2 4" stroke-linecap="round"/></svg>Ground</span>
+      </div>
+      <p class="clock" id="clock" aria-live="off">Transport clock: T+0:00</p>
+    </div>
+
+    <div class="panel" aria-labelledby="planTitle">
+      <div>
+        <p class="eyebrow">Current plan</p>
+        <h2 id="planTitle">Who rides what</h2>
+      </div>
+      <div class="organs" id="organs"></div>
+      <div class="plan-score">
+        <span>Plan score <span class="muted">(lower is better)</span></span>
+        <span class="mono" id="score">0.00</span>
+      </div>
+      <p class="source" id="source" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section class="evidence" aria-label="Transport failures">
+    <div class="panel" aria-labelledby="failTitle">
+      <div>
+        <p class="eyebrow">Measuring failures</p>
+        <h2 id="failTitle">How often does an organ miss its time limit?</h2>
+      </div>
+      <p class="note">Runs 10,000 random transports on the normal-day schedule. Each flight can run late using the AI's delay odds, and in about 1 of 10 transports the jet reports a 1–3 hour delay before departure. Every plan faces the same random delays.</p>
+      <div class="btn-row">
+        <button type="button" id="runSim">Simulate 10,000 transports</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">How the plan is made</th><th scope="col">Any organ late</th><th scope="col">Heart</th><th scope="col">Liver</th><th scope="col">Kidney</th></tr></thead>
+          <tbody id="simRows"><tr><td colspan="5" class="muted">Press the button to run the simulation.</td></tr></tbody>
+        </table>
+      </div>
+      <p class="note" id="simNote">Basic dispatch picks the cheapest option that fits on the timetable and ignores delay risk. Q-Organ Route plans with the AI risk. Re-planning solves again when the jet reports a delay.</p>
+    </div>
+
+    <div class="panel" aria-labelledby="logTitle">
+      <div class="log-head">
+        <div>
+          <p class="eyebrow">Tracking failures</p>
+          <h2 id="logTitle">Transport log</h2>
+        </div>
+        <div class="log-count">
+          <span class="mono" id="failCount">0</span>
+          <span class="muted">failures logged</span>
+        </div>
+      </div>
+      <ol class="log" id="log" aria-live="polite" aria-label="Transport events, newest first"></ol>
+      <div class="btn-row">
+        <button type="button" id="copyLog" class="ghost">Copy log</button>
+        <button type="button" id="clearLog" class="ghost">Clear log</button>
+        <span class="source" id="copyMsg" role="status"></span>
+      </div>
+      <p class="note">Every delay, re-plan, arrival and missed limit is recorded with its time and margin. Records like these are the data needed to understand why transports fail.</p>
+    </div>
+  </section>
+
+  <section class="evidence">
+    <div class="panel" aria-labelledby="qTitle">
+      <div>
+        <p class="eyebrow">Quantum evidence · recorded runs</p>
+        <h2 id="qTitle">How often QAOA lands on the best plan</h2>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Method</th><th scope="col">Simulator</th><th scope="col">Normal day</th><th scope="col">Jet delayed</th></tr></thead>
+          <tbody id="qRows"></tbody>
+        </table>
+      </div>
+      <p class="note">Share of 4,096 samples that returned the exact best plan. Random guessing over 9 qubits gives 0.2%. Every run found the best plan. The XY mixer keeps each organ on exactly one mode; under hardware noise some samples still break that rule.</p>
+    </div>
+
+    <div class="panel" aria-labelledby="aiTitle">
+      <div>
+        <p class="eyebrow">AI evidence · BTS December 2025</p>
+        <h2 id="aiTitle">Predicted risk for each commercial flight</h2>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Organ</th><th scope="col">Route</th><th scope="col">Carrier</th><th scope="col">Chance of delay</th><th scope="col">Delay if late</th></tr></thead>
+          <tbody id="aiRows"></tbody>
+        </table>
+      </div>
+      <p class="note">Gradient-boosted model trained on 395,570 U.S. flights (Dec 1–21) and tested on 186,734 flights it never saw (Dec 22–31). It ranks risky flights better than a route average: AUC <span class="mono">0.645</span> vs <span class="mono">0.587</span>. A cancellation counts as a 3-hour delay. No weather data yet, so the gain is modest.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p><strong>This effort is supported by Qollab &amp; IonQ.</strong></p>
+    <p>Built with Qiskit, qiskit-ionq, SciPy, NumPy and scikit-learn. Released under the MIT License.</p>
+    <p>AI assistance: built with help from Claude (Anthropic). At my direction, Claude researched the literature, wrote the code, debugged errors, suggested scenario values and helped with writing. I chose the problem, decided what to research, directed the project, made the design decisions, and ran and verified all results on Qollab and IonQ's simulators.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  // ---- model (mirrors scenario.py, qubo.py and risk_table.py) ----
+  var ORGANS = {
+    heart:  { dest: "Atlanta",   code: "ATL", limit: 4.0 },
+    liver:  { dest: "Charlotte", code: "CLT", limit: 12.0 },
+    kidney: { dest: "Orlando",   code: "MCO", limit: 24.0 }
+  };
+  var ORDER = ["heart", "liver", "kidney"];
+  var MODES = ["jet", "commercial", "ground"];
+  var MODE_LABEL = { jet: "Charter jet", commercial: "Commercial flight", ground: "Ground" };
+  // [base hours, delay probability, delay hours if late, cost $k]
+  var LEGS = {
+    heart:  { jet: [2.0, 0.05, 0.5, 18.0], commercial: [3.5, 0.164, 0.90, 3.0], ground: [10.0, 0.10, 1.0, 1.5] },
+    liver:  { jet: [2.3, 0.05, 0.5, 20.0], commercial: [4.0, 0.176, 1.04, 3.0], ground: [11.0, 0.10, 1.0, 1.8] },
+    kidney: { jet: [1.5, 0.05, 0.5, 12.0], commercial: [2.8, 0.206, 0.98, 2.5], ground: [3.8, 0.10, 0.5, 0.8] }
+  };
+  var AI = [
+    { organ: "Heart",  route: "MIA → ATL", carrier: "MQ", p: 0.164, d: 0.90 },
+    { organ: "Liver",  route: "MIA → CLT", carrier: "AA", p: 0.176, d: 1.04 },
+    { organ: "Kidney", route: "MIA → MCO", carrier: "AA", p: 0.206, d: 0.98 }
+  ];
+  var QUANTUM = [
+    { method: "Standard QAOA", sim: "Ideal",          a: 0.040, b: 0.048 },
+    { method: "Standard QAOA", sim: "IonQ Aria 1",    a: 0.031, b: 0.034 },
+    { method: "XY mixer",      sim: "Ideal",          a: 0.255, b: 0.218 },
+    { method: "XY mixer",      sim: "IonQ Aria 1 + AI risk", a: 0.100, b: 0.095 }
+  ];
+  var W_ISCHEMIA = 10, W_COST = 0.1, LATE_PENALTY = 50;
+
+  function legInfo(organ, mode, s) {
+    var L = LEGS[organ][mode];
+    var base = L[0];
+    if (mode === "jet") base += s.jetDelay;
+    if (organ === "heart" && mode === "commercial") base += s.atlDelay;
+    var expected = base + L[1] * L[2];
+    var limit = ORGANS[organ].limit;
+    var score = W_ISCHEMIA * expected / limit + W_COST * L[3];
+    if (expected > limit) score += LATE_PENALTY;
+    return { expected: expected, score: score, limit: limit, cost: L[3] };
+  }
+
+  // exact search over all 27 plans with one jet (what brute_force() does in Python)
+  function solve(s) {
+    var best = null;
+    MODES.forEach(function (a) { MODES.forEach(function (b) { MODES.forEach(function (c) {
+      var plan = { heart: a, liver: b, kidney: c };
+      var jets = [a, b, c].filter(function (m) { return m === "jet"; }).length;
+      if (jets > 1) return;
+      var total = 0;
+      ORDER.forEach(function (o) { total += legInfo(o, plan[o], s).score; });
+      if (!best || total < best.total) best = { plan: plan, total: total };
+    }); }); });
+    return best;
+  }
+
+  // ---- failure simulation (mirrors failure_sim.py) ----
+  var ALL_PLANS = [];
+  MODES.forEach(function (a) { MODES.forEach(function (b) { MODES.forEach(function (c) {
+    if ([a, b, c].filter(function (m) { return m === "jet"; }).length <= 1) ALL_PLANS.push({ heart: a, liver: b, kidney: c });
+  }); }); });
+  function planKey(pl) { return ORDER.map(function (o) { return pl[o]; }).join("|"); }
+  function planScore(pl, jetDelay) {
+    var s = { jetDelay: jetDelay, atlDelay: 0 }, t = 0;
+    ORDER.forEach(function (o) { t += legInfo(o, pl[o], s).score; });
+    return t;
+  }
+  function bestPlanFor(jetDelay) {
+    return ALL_PLANS.reduce(function (b, pl) { return planScore(pl, jetDelay) < planScore(b, jetDelay) ? pl : b; });
+  }
+  function basicPlan() {
+    var ok = ALL_PLANS.filter(function (pl) {
+      return ORDER.every(function (o) { return LEGS[o][pl[o]][0] <= ORGANS[o].limit; });
+    });
+    function cost(pl) { return ORDER.reduce(function (t, o) { return t + LEGS[o][pl[o]][3]; }, 0); }
+    return ok.reduce(function (b, pl) { return cost(pl) < cost(b) ? pl : b; });
+  }
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function simulateFailures(n, seed) {
+    var rnd = mulberry32(seed);
+    var pBasic = basicPlan(), pAi = bestPlanFor(0);
+    var keys = ["basic", "planner", "replan"];
+    var fails = {}, any = {};
+    keys.forEach(function (k) { fails[k] = { heart: 0, liver: 0, kidney: 0 }; any[k] = 0; });
+    var replanCache = {}, replans = 0;
+    for (var i = 0; i < n; i++) {
+      var jetDelay = rnd() < 0.10 ? 1 + 2 * rnd() : 0;
+      var late = {};
+      ORDER.forEach(function (o) { MODES.forEach(function (m) {
+        var L = LEGS[o][m];
+        late[o + m] = rnd() < L[1] ? -L[2] * Math.log(1 - rnd()) : 0;
+      }); });
+      var pRe = pAi;
+      if (jetDelay > 0) {
+        var bucket = jetDelay.toFixed(2);
+        pRe = replanCache[bucket] || (replanCache[bucket] = bestPlanFor(jetDelay));
+        if (planKey(pRe) !== planKey(pAi)) replans++;
+      }
+      [["basic", pBasic], ["planner", pAi], ["replan", pRe]].forEach(function (pair) {
+        var k = pair[0], pl = pair[1], failed = false;
+        ORDER.forEach(function (o) {
+          var m = pl[o];
+          var t = LEGS[o][m][0] + late[o + m] + (m === "jet" ? jetDelay : 0);
+          if (t > ORGANS[o].limit) { fails[k][o]++; failed = true; }
+        });
+        if (failed) any[k]++;
+      });
+    }
+    return { n: n, fails: fails, any: any, replans: replans, plans: { basic: pBasic, planner: pAi } };
+  }
+
+  // ---- transport log ----
+  var logEntries = [], failureCount = 0, logStart = Date.now();
+  function stamp() {
+    var d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + ":" + String(d.getSeconds()).padStart(2, "0");
+  }
+  var TAG_LABEL = { plan: "Plan", delay: "Delay", replan: "Re-plan", arrived: "Arrived", failure: "Failure", sim: "Simulation" };
+  function logEvent(type, msg) {
+    if (type === "failure") failureCount++;
+    logEntries.unshift({ time: stamp(), type: type, msg: msg });
+    if (logEntries.length > 200) logEntries.pop();
+    drawLog();
+  }
+  function drawLog() {
+    var ol = document.getElementById("log");
+    document.getElementById("failCount").textContent = String(failureCount);
+    if (!logEntries.length) { ol.innerHTML = '<li><span class="empty">No events yet.</span></li>'; return; }
+    ol.innerHTML = logEntries.map(function (e) {
+      var cls = e.type === "failure" ? "failure" : (e.type === "arrived" ? "arrived" : (e.type === "delay" ? "delay" : ""));
+      return '<li><time>' + e.time + '</time><span class="tag ' + cls + '">' + TAG_LABEL[e.type] + '</span><span class="msg">' + e.msg + '</span></li>';
+    }).join("");
+  }
+  function cap(o) { return o.charAt(0).toUpperCase() + o.slice(1); }
+  function planText(pl) { return ORDER.map(function (o) { return cap(o) + " " + MODE_LABEL[pl[o]].toLowerCase(); }).join(", "); }
+
+  // ---- map ----
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var POS = { MIA: [470, 352], ATL: [150, 92], CLT: [372, 58], MCO: [420, 232] };
+  var map = document.getElementById("map");
+  function el(tag, attrs, parent) {
+    var n = document.createElementNS(SVGNS, tag);
+    Object.keys(attrs).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+    (parent || map).appendChild(n);
+    return n;
+  }
+  // coastline hint: Florida peninsula + Atlantic edge, drawn faintly
+  el("path", { d: "M 330 330 C 360 260 380 200 430 170 L 520 120 L 600 80 L 600 400 L 500 400 C 488 380 482 368 478 352 C 470 320 450 300 440 270 C 430 250 405 252 380 290 C 362 316 345 332 330 330 Z",
+               fill: "var(--line)", "fill-opacity": "0.35", stroke: "none" });
+  var routeLayer = el("g", {});
+  var dotLayer = el("g", {});
+  var cityLayer = el("g", {});
+  function city(code, name, anchor) {
+    var p = POS[code];
+    el("circle", { cx: p[0], cy: p[1], r: code === "MIA" ? 8 : 6, fill: "var(--panel)", stroke: "var(--ink)", "stroke-width": 2.5 }, cityLayer);
+    var t = el("text", { x: p[0] + (anchor === "end" ? -12 : 12), y: p[1] + 5, "text-anchor": anchor || "start",
+      fill: "var(--ink)", "font-family": "var(--font-data)", "font-size": "13", "font-weight": "600" }, cityLayer);
+    t.textContent = code + " · " + name;
+  }
+  city("MIA", "Miami (donor)", "end");
+  city("ATL", "Atlanta", "start");
+  city("CLT", "Charlotte", "start");
+  city("MCO", "Orlando", "end");
+
+  var DASH = { jet: "", commercial: "10 6", ground: "2 6" };
+  var paths = {}, dots = {};
+  function routePath(organ, mode) {
+    var a = POS.MIA, b = POS[ORGANS[organ].code];
+    var bend = mode === "ground" ? 40 : -30; // ground hugs the coast, flights arc
+    var mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    var dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
+    var cx = mx + (-dy / len) * bend, cy = my + (dx / len) * bend;
+    return "M " + a[0] + " " + a[1] + " Q " + cx.toFixed(1) + " " + cy.toFixed(1) + " " + b[0] + " " + b[1];
+  }
+  function drawRoutes(plan, status) {
+    while (routeLayer.firstChild) routeLayer.removeChild(routeLayer.firstChild);
+    while (dotLayer.firstChild) dotLayer.removeChild(dotLayer.firstChild);
+    ORDER.forEach(function (o) {
+      var mode = plan[o];
+      var color = status[o] === "over" ? "var(--bad)" : (status[o] === "tight" ? "var(--warn)" : "var(--accent)");
+      var p = el("path", { d: routePath(o, mode), fill: "none", stroke: color, "stroke-width": 3.5,
+        "stroke-dasharray": DASH[mode], "stroke-linecap": "round" }, routeLayer);
+      paths[o] = p;
+      var lbl = el("text", { "font-family": "var(--font-body)", "font-size": "12", fill: "var(--muted)" }, routeLayer);
+      var mid = p.getPointAtLength(p.getTotalLength() * 0.55);
+      lbl.setAttribute("x", (mid.x + 8).toFixed(1));
+      lbl.setAttribute("y", (mid.y - 6).toFixed(1));
+      lbl.textContent = o.charAt(0).toUpperCase() + o.slice(1) + " · " + MODE_LABEL[mode].toLowerCase();
+      var d = el("circle", { r: 7, fill: color, stroke: "var(--panel)", "stroke-width": 2, cx: POS.MIA[0], cy: POS.MIA[1] }, dotLayer);
+      d.style.opacity = "0";
+      dots[o] = d;
+    });
+  }
+
+  // ---- UI ----
+  var state = { jetDelay: 0, atlDelay: 0 };
+  var current = null;
+  var $ = function (id) { return document.getElementById(id); };
+  function fmtH(h) { var m = Math.round(h * 60); return Math.floor(m / 60) + " h " + String(m % 60).padStart(2, "0") + " min"; }
+
+  function render() {
+    stopAnimation();
+    $("jetDelayOut").textContent = state.jetDelay.toFixed(2).replace(/0$/, "") + " h";
+    $("atlDelayOut").textContent = state.atlDelay.toFixed(2).replace(/0$/, "") + " h";
+    var best = solve(state);
+    current = best;
+    var status = {};
+    var box = $("organs");
+    box.innerHTML = "";
+    ORDER.forEach(function (o) {
+      var info = legInfo(o, best.plan[o], state);
+      var frac = info.expected / info.limit;
+      var st = info.expected > info.limit ? "over" : (frac > 0.8 ? "tight" : "ok");
+      status[o] = st;
+      var chipText = st === "over" ? "Over limit" : (st === "tight" ? "Tight" : "Within limit");
+      var margin = info.limit - info.expected;
+      var card = document.createElement("div");
+      card.className = "organ";
+      card.innerHTML =
+        '<div class="organ-top"><span class="organ-name">' + o.charAt(0).toUpperCase() + o.slice(1) +
+        ' <span class="muted" style="font-family:var(--font-body);font-size:0.95rem;font-weight:400">to ' + ORGANS[o].dest + '</span></span>' +
+        '<span class="mode">' + MODE_LABEL[best.plan[o]] + '</span></div>' +
+        '<div class="bar ' + st + '" role="img" aria-label="Expected ' + fmtH(info.expected) + ' of a ' + info.limit + ' hour limit"><i style="width:' + Math.min(100, frac * 100).toFixed(1) + '%"></i></div>' +
+        '<div class="organ-meta"><span class="mono">' + fmtH(info.expected) + ' of ' + info.limit + ' h</span>' +
+        '<span class="chip ' + st + '">' + chipText + (st === "over" ? "" : " · " + fmtH(margin) + " spare") + '</span></div>';
+      box.appendChild(card);
+    });
+    $("score").textContent = best.total.toFixed(3);
+    var recorded = state.atlDelay === 0 && (state.jetDelay === 0 || state.jetDelay === 2.5);
+    var which = state.jetDelay === 0 ? "normal day" : "jet delayed 2.5 h";
+    $("source").innerHTML = recorded
+      ? "<strong>Matches a recorded IonQ run (" + which + ").</strong> QAOA with the XY mixer returned this same plan on IonQ Aria 1."
+      : "<strong>Classical exact re-solve.</strong> No recorded quantum run for this setting; the plan comes from checking all 27 options.";
+    drawRoutes(best.plan, status);
+    $("clock").textContent = "Transport clock: T+0:00";
+  }
+
+  // ---- transport animation ----
+  var raf = null, reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function stopAnimation() { if (raf) cancelAnimationFrame(raf); raf = null; $("play").disabled = false; }
+  function play() {
+    if (!current) return;
+    stopAnimation();
+    var times = {}, maxT = 0;
+    ORDER.forEach(function (o) { times[o] = legInfo(o, current.plan[o], state).expected; maxT = Math.max(maxT, times[o]); });
+    var secondsPerHour = 1.1;
+    var start = null, logged = {};
+    $("play").disabled = true;
+    logEvent("plan", "Transport started: " + planText(current.plan) + ".");
+    function frame(ts) {
+      if (start === null) start = ts;
+      var t = reduce ? maxT : (ts - start) / 1000 / secondsPerHour;
+      if (t > maxT) t = maxT;
+      ORDER.forEach(function (o) {
+        var f = Math.min(1, t / times[o]);
+        var p = paths[o], pt = p.getPointAtLength(p.getTotalLength() * f);
+        dots[o].setAttribute("cx", pt.x.toFixed(1));
+        dots[o].setAttribute("cy", pt.y.toFixed(1));
+        dots[o].style.opacity = "1";
+      });
+      ORDER.forEach(function (o) {
+        if (t >= times[o] && !logged[o]) {
+          logged[o] = true;
+          var lim = ORGANS[o].limit, margin = lim - times[o];
+          if (margin < 0) {
+            logEvent("failure", cap(o) + " reached " + ORGANS[o].dest + " at T+" + fmtH(times[o]) + ", " + fmtH(-margin) + " past its " + lim + " h limit by " + MODE_LABEL[current.plan[o]].toLowerCase() + ".");
+          } else {
+            logEvent("arrived", cap(o) + " reached " + ORGANS[o].dest + " at T+" + fmtH(times[o]) + " with " + fmtH(margin) + " to spare.");
+          }
+        }
+      });
+      var m = Math.round(t * 60);
+      var arrived = ORDER.filter(function (o) { return t >= times[o]; }).map(function (o) { return o; });
+      $("clock").textContent = "Transport clock: T+" + Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0") +
+        (arrived.length ? " · arrived: " + arrived.join(", ") : "");
+      if (t < maxT) raf = requestAnimationFrame(frame); else { raf = null; $("play").disabled = false; }
+    }
+    raf = requestAnimationFrame(frame);
+  }
+
+  // ---- evidence tables ----
+  function pbar(v, max) {
+    var w = Math.max(0, Math.min(1, v / max)) * 100;
+    return '<span class="pbar"><svg viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">' +
+      '<rect x="0" y="0" width="100" height="12" rx="3" fill="var(--line)"/>' +
+      '<rect x="0" y="0" width="' + w.toFixed(1) + '" height="12" rx="3" fill="var(--accent)"/></svg>' +
+      '<span class="mono">' + (v * 100).toFixed(1) + '%</span></span>';
+  }
+  $("qRows").innerHTML = QUANTUM.map(function (r) {
+    return "<tr><td>" + r.method + "</td><td>" + r.sim + "</td><td>" + pbar(r.a, 0.3) + "</td><td>" + pbar(r.b, 0.3) + "</td></tr>";
+  }).join("") + '<tr><td>Random guess</td><td>—</td><td>' + pbar(1 / 512, 0.3) + '</td><td>' + pbar(1 / 512, 0.3) + '</td></tr>';
+  $("aiRows").innerHTML = AI.map(function (r) {
+    return "<tr><td>" + r.organ + "</td><td class='num'>" + r.route + "</td><td class='num'>" + r.carrier + "</td><td>" + pbar(r.p, 0.3) +
+      "</td><td class='num'>" + Math.round(r.d * 60) + " min</td></tr>";
+  }).join("");
+
+  // ---- wiring ----
+  var lastPlan = null;
+  function logPlanChange(delayMsg) {
+    if (delayMsg) logEvent("delay", delayMsg);
+    var changed = ORDER.filter(function (o) { return lastPlan && lastPlan[o] !== current.plan[o]; });
+    if (!lastPlan) {
+      logEvent("plan", "Plan created: " + planText(current.plan) + ".");
+    } else if (changed.length) {
+      logEvent("replan", "Re-planned: " + changed.map(function (o) {
+        return cap(o) + " " + MODE_LABEL[lastPlan[o]].toLowerCase() + " → " + MODE_LABEL[current.plan[o]].toLowerCase();
+      }).join("; ") + ".");
+    } else {
+      logEvent("plan", "Plan checked, no change needed.");
+    }
+    ORDER.forEach(function (o) {
+      var info = legInfo(o, current.plan[o], state);
+      if (info.expected > info.limit) {
+        logEvent("delay", "Warning: " + o + " is expected " + fmtH(info.expected - info.limit) + " past its limit even on the best plan.");
+      }
+    });
+    lastPlan = Object.assign({}, current.plan);
+  }
+  function hours(v) { return (Math.round(v * 100) / 100) + " h"; }
+  $("jetDelay").addEventListener("input", function (e) { state.jetDelay = parseFloat(e.target.value); render(); });
+  $("atlDelay").addEventListener("input", function (e) { state.atlDelay = parseFloat(e.target.value); render(); });
+  $("jetDelay").addEventListener("change", function () { logPlanChange("Charter jet delay reported: " + hours(state.jetDelay) + "."); });
+  $("atlDelay").addEventListener("change", function () { logPlanChange("Miami to Atlanta flight delay reported: " + hours(state.atlDelay) + "."); });
+  $("play").addEventListener("click", play);
+  $("preset").addEventListener("click", function () {
+    state.jetDelay = 2.5; state.atlDelay = 0; $("jetDelay").value = 2.5; $("atlDelay").value = 0; render();
+    logPlanChange("Charter jet delay reported: 2.5 h (recorded disruption).");
+  });
+  $("reset").addEventListener("click", function () {
+    state.jetDelay = 0; state.atlDelay = 0; $("jetDelay").value = 0; $("atlDelay").value = 0; render();
+    logPlanChange("Delays cleared.");
+  });
+
+  function pct(x) { return (x * 100).toFixed(1) + "%"; }
+  $("runSim").addEventListener("click", function () {
+    var btn = $("runSim");
+    btn.disabled = true; btn.textContent = "Simulating…";
+    setTimeout(function () {
+      var seed = 1 + Math.floor(Math.random() * 1e9);
+      var r = simulateFailures(10000, seed);
+      var rows = [["Basic dispatch", "basic"], ["Q-Organ Route, plan once", "planner"], ["Q-Organ Route + re-planning", "replan"]];
+      $("simRows").innerHTML = rows.map(function (row) {
+        var k = row[1], f = r.fails[k];
+        return "<tr><td>" + row[0] + "</td><td>" + pbar(r.any[k] / r.n, 0.15) + "</td><td class='num'>" + pct(f.heart / r.n) +
+          "</td><td class='num'>" + pct(f.liver / r.n) + "</td><td class='num'>" + pct(f.kidney / r.n) + "</td></tr>";
+      }).join("");
+      $("simNote").innerHTML = "Basic dispatch sent " + planText(r.plans.basic).toLowerCase() + ", ignoring delay risk. Q-Organ Route sent " +
+        planText(r.plans.planner).toLowerCase() + ", and re-planned in " + r.replans.toLocaleString() + " of 10,000 transports. Each run uses new random delays; across 100,000 runs in the Python version the averages were 12.5%, 5.1% and 1.0%.";
+      logEvent("sim", "10,000 transports simulated. Any organ late: basic " + pct(r.any.basic / r.n) + ", Q-Organ Route " +
+        pct(r.any.planner / r.n) + ", with re-planning " + pct(r.any.replan / r.n) + ".");
+      btn.disabled = false; btn.textContent = "Simulate again";
+    }, 30);
+  });
+
+  $("copyLog").addEventListener("click", function () {
+    var text = logEntries.slice().reverse().map(function (e) { return e.time + "  " + TAG_LABEL[e.type].toUpperCase() + "  " + e.msg.replace(/<[^>]+>/g, ""); }).join("\n");
+    var msg = $("copyMsg");
+    if (!text) { msg.textContent = "The log is empty."; return; }
+    try {
+      navigator.clipboard.writeText(text).then(function () { msg.textContent = "Copied."; },
+        function () { msg.textContent = "Copy was blocked here. Select the log entries and copy them by hand."; });
+    } catch (err) { msg.textContent = "Copy was blocked here. Select the log entries and copy them by hand."; }
+  });
+  $("clearLog").addEventListener("click", function () { logEntries = []; failureCount = 0; drawLog(); $("copyMsg").textContent = ""; });
+
+  render();
+  logPlanChange(null);
+})();
+</script>

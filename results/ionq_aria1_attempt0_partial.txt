@@ -1,0 +1,17 @@
+Q-Organ Route - first IonQ Aria 1 attempt (partial run)
+Date: Oct 9, 2026 (build window)
+Backend: ionq_simulator (IonQ Aria 1 noise model), 9-qubit circuit
+Circuit execution time: 1000 ms
+
+Only the nominal scenario completed. The disruption scenario failed because
+Qollab allows one circuit job per run (fixed later by placing both scenarios
+side by side in one 18-qubit circuit; see ionq_aria1_run1.txt).
+
+=== Nominal plan ===
+Exact (brute force): {'heart': 'jet', 'liver': 'commercial', 'kidney': 'commercial'}  E=12.350  (6.9 ms)
+OR-Tools CP-SAT:     skipped (not installed in this runtime)
+  sampled on: ionq_simulator
+QAOA p=2, CVaR alpha=0.2, 9 qubits, depth 18
+  best sampled plan: {'heart': 'jet', 'liver': 'commercial', 'kidney': 'commercial'}  E=12.350
+  P(optimal)=0.027  P(feasible)=0.364  (random guess P(optimal)=0.0020)
+  found optimum: True

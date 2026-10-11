@@ -1,0 +1,30 @@
+Q-Organ Route - XY mixer on IonQ Aria 1 noise-model simulator (via Qollab)
+Date: Oct 10, 2026 (build window)
+Backend: ionq_simulator (IonQ Aria 1 noise model), 4096 shots
+Both scenarios side by side in one 18-qubit circuit (one job per run)
+Circuit execution time: 77000 ms
+
+=== Nominal plan ===
+Exact (brute force): {'heart': 'jet', 'liver': 'commercial', 'kidney': 'commercial'}  E=12.350  (1.9 ms)
+OR-Tools CP-SAT:     skipped (not installed in this runtime)
+QAOA p=2, mixer=xy, CVaR alpha=0.2, 9 qubits, depth 66
+  sampled on: ionq_simulator
+  best sampled plan: {'heart': 'jet', 'liver': 'commercial', 'kidney': 'commercial'}  E=12.350
+  P(optimal)=0.094  P(feasible)=0.334  (random guess P(optimal)=0.0020)
+  found optimum: True
+
+=== Disruption: jet delayed 2.5 h ===
+Exact (brute force): {'heart': 'commercial', 'liver': 'commercial', 'kidney': 'commercial'}  E=15.475  (3.0 ms)
+OR-Tools CP-SAT:     skipped (not installed in this runtime)
+QAOA p=2, mixer=xy, CVaR alpha=0.2, 9 qubits, depth 66
+  sampled on: ionq_simulator
+  best sampled plan: {'heart': 'commercial', 'liver': 'commercial', 'kidney': 'commercial'}  E=15.475
+  P(optimal)=0.085  P(feasible)=0.492  (random guess P(optimal)=0.0020)
+  found optimum: True
+
+--- Summary: P(optimal), nominal / disruption ---
+Standard QAOA, ideal:          0.040 / 0.048   (depth 18)
+Standard QAOA, IonQ Aria 1:    0.031 / 0.034
+XY mixer, ideal:               0.255 / 0.218   (depth 66)
+XY mixer, IonQ Aria 1:         0.094 / 0.085
+Random guess:                  0.002 / 0.002
